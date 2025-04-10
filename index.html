@@ -8,28 +8,94 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
       body { margin: 0; overflow: hidden; }
-      canvas { display: none; } /* Oculta el canvas de p5 si no quieres que se vea fuera del plano */
+      canvas { display: none; }
     </style>
   </head>
   <body>
-    <a-scene embedded arjs>
+    <!-- Lienzo metaballs (p5.js) fuera del a-scene -->
+    <canvas id="metaballCanvas" width="256" height="256" crossorigin="anonymous"></canvas>
+
+    <a-scene vr-mode-ui="enabled: false;" embedded arjs="sourceType: webcam;">
+      <!-- Assets para texturas -->
+      <a-assets>
+        <video id="video" autoplay muted></video>
+        <canvas id="metaballCanvas" width="256" height="256"></canvas>
+      </a-assets>
+
       <!-- Marcador Hiro -->
       <a-marker preset="hiro">
-        <!-- Plano que mostrará el canvas de metaballs -->
-        <a-plane id="metaball-plane"
-                 position="0 0 0"
-                 rotation="-90 0 0"
-                 width="2"
-                 height="2"
-                 material="shader: flat; src: #metaballCanvas;">
+        <a-plane 
+          position="0 0.5 0"
+          rotation="-90 0 0"
+          width="2"
+          height="2"
+          material="shader: flat; src: #metaballCanvas;">
         </a-plane>
       </a-marker>
-      <a-entity camera></a-entity>
 
-      <!-- Enlazar canvas como textura -->
-      <canvas id="metaballCanvas" width="256" height="256"></canvas>
+      <a-entity camera></a-entity>
     </a-scene>
 
-    <script src="sketch.js"></script>
+    <!-- Tu sketch de metaballs -->
+    <script>
+      let blobs = [];
+
+      function setup() {
+        let canvas = createCanvas(256, 256);
+        canvas.id("metaballCanvas");
+        canvas.elt.setAttribute("crossorigin", "anonymous");
+        canvas.style.display = "none";
+
+        for (let i = 0; i < 5; i++) {
+          blobs.push(new Blob());
+        }
+      }
+
+      function draw() {
+        background(0);
+        loadPixels();
+
+        for (let x = 0; x < width; x++) {
+          for (let y = 0; y < height; y++) {
+            let sum = 0;
+            for (let b of blobs) {
+              let d = dist(x, y, b.x, b.y);
+              sum += 10 * b.r / d;
+            }
+
+            let idx = (x + y * width) * 4;
+            let val = sum > 255 ? 255 : sum;
+            pixels[idx] = val;
+            pixels[idx + 1] = 0;
+            pixels[idx + 2] = val;
+            pixels[idx + 3] = 255;
+          }
+        }
+
+        updatePixels();
+
+        for (let b of blobs) {
+          b.update();
+        }
+      }
+
+      class Blob {
+        constructor() {
+          this.x = random(width);
+          this.y = random(height);
+          this.r = random(100, 200);
+          this.xspeed = random(-2, 2);
+          this.yspeed = random(-2, 2);
+        }
+
+        update() {
+          this.x += this.xspeed;
+          this.y += this.yspeed;
+
+          if (this.x < 0 || this.x > width) this.xspeed *= -1;
+          if (this.y < 0 || this.y > height) this.yspeed *= -1;
+        }
+      }
+    </script>
   </body>
 </html>
